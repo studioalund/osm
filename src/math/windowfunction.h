@@ -18,21 +18,37 @@
 #ifndef WINDOWFUNCTION_H
 #define WINDOWFUNCTION_H
 
+#ifndef OSM_STANDALONE_DSP
 #include <QDebug>
 #include <QVariant>
+#include <map>
+#endif
 #include <math.h>
 #include "container/array.h"
 
-class WindowFunction : QObject
+class WindowFunction
+#ifndef OSM_STANDALONE_DSP
+    : QObject
+#endif
 {
+#ifndef OSM_STANDALONE_DSP
     Q_OBJECT
+#endif
 
 public:
     enum Type {Rectangular, Hann, Hamming, FlatTop, BlackmanHarris, HFT223D, Exponental};
+#ifdef OSM_STANDALONE_DSP
+    explicit WindowFunction(Type type);
+    WindowFunction(const WindowFunction &) = delete;
+    WindowFunction &operator=(const WindowFunction &) = delete;
+#else
     Q_ENUM(Type)
     static const std::map<Type, QString> TypeMap;
 
     explicit WindowFunction(Type type, QObject *parent = nullptr);
+    static QVariant getTypes();
+    QString static name(Type type) noexcept;
+#endif
 
     void setSize(unsigned int size);
     unsigned int size() const;
@@ -43,13 +59,9 @@ public:
     Type type() const;
 
     void setType(Type t);
-    static QVariant getTypes();
 
     //! return gain of point k (corrcted with global wf gain data)
     const float &get(unsigned int k) const;
-
-    //! static function return string name of type
-    QString static name(Type type) noexcept;
 
     float gain() const;
     float norm() const;
@@ -64,5 +76,7 @@ private:
     //! calculate data for current type
     void calculate();
 };
+#ifndef OSM_STANDALONE_DSP
 QDebug operator<<(QDebug dbg, const WindowFunction::Type &t);
+#endif
 #endif // WINDOWFUNCTION_H

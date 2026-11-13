@@ -223,6 +223,7 @@ bool Complex::operator<(const Complex &c) const
 {
     return absSquared() < c.absSquared();
 }
+#ifndef OSM_STANDALONE_DSP
 QDebug operator<<(QDebug dbg, const Complex &c)
 {
     dbg.nospace() << "Complex value: r:"
@@ -230,3 +231,4 @@ QDebug operator<<(QDebug dbg, const Complex &c)
 
     return dbg.maybeSpace();
 }
+#endif

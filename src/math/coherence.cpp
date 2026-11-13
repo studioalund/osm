@@ -16,20 +16,16 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "coherence.h"
-#if defined(Q_PROCESSOR_X86_64)
-#include "ssemath.h"
-#endif
-#if defined(Q_PROCESSOR_ARM)
-#include "armmath.h"
-#endif
+
+#include <cassert>
 
 Coherence::Coherence(): m_subpointer(0), m_depth(1)
 {
 
 }
-void Coherence::setSize(const size_t &size) noexcept
+void Coherence::setSize(const size_t &size)
 {
-    Q_ASSERT(size % 4 == 0);
+    assert(size % 4 == 0);
     m_Grr.resize(size);
     m_Gmm.resize(size);
     m_Grm.resize(size);
@@ -41,7 +37,7 @@ void Coherence::setSize(const size_t &size) noexcept
     m_Crm.fill(0);
     setDepth(m_depth);
 }
-void Coherence::setDepth(const size_t &depth) noexcept
+void Coherence::setDepth(const size_t &depth)
 {
     m_depth = depth;
     m_Gmm.each([&depth](Container::array<float> *a) {
@@ -82,13 +78,13 @@ float Coherence::value(unsigned int i) const noexcept
     return Crm.abs() / std::sqrt(Crr * Cmm);
 }
 
-GNU_ALIGN void Coherence::calculate(Abstract::Source::FTData *dst, FourierTransform *src)
+GNU_ALIGN void Coherence::calculate(Output *dst, FourierTransform *src)
 {
     ++m_subpointer;
     if (m_subpointer >= m_depth)
         m_subpointer = 0;
 
-    float Crrmm[4], CrmAbs[4];
+    alignas(16) float Crrmm[4], CrmAbs[4], result[4];
     v4sf CrrmmVec, CrmAbsVec;
 
     for (unsigned int i = 0; i < m_Grr.size() ; i += 4) {
@@ -114,12 +110,19 @@ GNU_ALIGN void Coherence::calculate(Abstract::Source::FTData *dst, FourierTransf
         CrmAbsVec = _mm_mul_ps( CrmAbsVec, _mm_rsqrt_ps( CrmAbsVec ) );
 
         CrmAbsVec = _mm_div_ps(CrmAbsVec, CrrmmVec);
-        _mm_store_ps(CrmAbs, CrmAbsVec);
+        _mm_store_ps(result, CrmAbsVec);
 
-        dst[i    ].coherence = CrmAbs[0];
-        dst[i + 1].coherence = CrmAbs[1];
-        dst[i + 2].coherence = CrmAbs[2];
-        dst[i + 3].coherence = CrmAbs[3];
+        for (unsigned int lane = 0; lane < 4; ++lane) {
+#ifdef OSM_STANDALONE_DSP
+            // The SIMD square root computes 0 * infinity for a zero cross spectrum.
+            if (CrmAbs[lane] == 0 && Crrmm[lane] > 0 && std::isfinite(Crrmm[lane])) {
+                result[lane] = 0;
+            }
+            dst[i + lane] = result[lane];
+#else
+            dst[i + lane].coherence = result[lane];
+#endif
+        }
     }
 }
 

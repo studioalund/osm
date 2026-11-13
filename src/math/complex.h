@@ -19,7 +19,9 @@
 #define COMPLEX_H
 
 #include <math.h>
+#ifndef OSM_STANDALONE_DSP
 #include <QDebug>
+#endif
 
 struct Complex {
 
@@ -73,6 +75,8 @@ struct Complex {
     bool operator<(const Complex &c) const;
 };
 
+#ifndef OSM_STANDALONE_DSP
 QDebug operator<<(QDebug dbg, const Complex &c);
+#endif
 
 #endif // COMPLEX_H

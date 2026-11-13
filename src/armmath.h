@@ -20,10 +20,8 @@
 
 #include "arm_neon.h"
 
-#ifdef Q_PROCESSOR_ARM
+#if defined(__clang__) || defined(__GNUC__)
 #define GNU_ALIGN  __attribute__((aligned(16)))
-#elif defined(__GNUC__)
-#define GNU_ALIGN __attribute__((force_align_arg_pointer))
 #else
 #define GNU_ALIGN
 #endif
@@ -32,15 +30,12 @@
 
 using v4sf = float32x4_t;
 
-__attribute__((aligned(16))) inline v4sf _mm_set1_ps(const float &v)
+GNU_ALIGN inline v4sf _mm_set1_ps(const float &v)
 {
     return vdupq_n_f32(v);
 };
 
-__attribute__((aligned(16))) inline v4sf _mm_set_ps(const float &v3,
-                                                    const float &v2,
-                                                    const float &v1,
-                                                    const float &v0)
+GNU_ALIGN inline v4sf _mm_set_ps(const float &v3, const float &v2, const float &v1, const float &v0)
 {
     v4sf r = vdupq_n_f32(0);
     r = vsetq_lane_f32(v0, r, 0);
@@ -50,50 +45,52 @@ __attribute__((aligned(16))) inline v4sf _mm_set_ps(const float &v3,
     return r;
 }
 
-__attribute__((aligned(16))) inline v4sf _mm_mul_ps(const v4sf &left, const v4sf &right)
+GNU_ALIGN inline v4sf _mm_mul_ps(const v4sf &left, const v4sf &right)
 {
     return vmulq_f32(left, right);
 }
 
-__attribute__((aligned(16))) inline v4sf _mm_div_ps(const v4sf &left, const v4sf &right)
+GNU_ALIGN inline v4sf _mm_div_ps(const v4sf &left, const v4sf &right)
 {
     return vdivq_f32(left, right);
 }
 
-__attribute__((aligned(16))) inline v4sf _mm_add_ps(const v4sf &left, const v4sf &right)
+GNU_ALIGN inline v4sf _mm_add_ps(const v4sf &left, const v4sf &right)
 {
     return vaddq_f32(left, right);
 }
 
-__attribute__((aligned(16))) inline void _mm_store_ps(float *dest, v4sf &source)
+GNU_ALIGN inline void _mm_store_ps(float *dest, v4sf &source)
 {
     vst1q_f32(dest, source);
 }
 
-__attribute__((aligned(16))) inline v4sf _mm_sub_ps(const v4sf &left, const v4sf &right)
+GNU_ALIGN inline v4sf _mm_sub_ps(const v4sf &left, const v4sf &right)
 {
     return vsubq_f32(left, right);
 }
 
-__attribute__((aligned(16))) inline v4sf _mm_rsqrt_ps(const v4sf &left)
+GNU_ALIGN inline v4sf _mm_rsqrt_ps(const v4sf &left)
 {
     return vrsqrteq_f32(left);
 }
 
-__attribute__((aligned(16))) inline v4sf _mm_load_ps( float *source )
+GNU_ALIGN inline v4sf _mm_load_ps( float *source )
 {
     return _mm_set_ps(source[3], source[2], source[1], source[0]);
 }
 
 
-#define _mm_shuffle_ps(a, b, imm8) \
-__extension__({ \
-                float32x4_t ret;                                                   \
-                ret = vmovq_n_f32(   vgetq_lane_f32(a,  (imm8)       & (0x3)));     \
-                ret = vsetq_lane_f32(vgetq_lane_f32(a, ((imm8) >> 2) & 0x3), ret, 1);                                                       \
-                ret = vsetq_lane_f32(vgetq_lane_f32(b, ((imm8) >> 4) & 0x3), ret, 2);                                                       \
-                ret = vsetq_lane_f32(vgetq_lane_f32(b, ((imm8) >> 6) & 0x3), ret, 3);                                                                    \
-              })
+template <int mask>
+inline v4sf osm_neon_shuffle(v4sf a, v4sf b)
+{
+    auto result = vmovq_n_f32(vgetq_lane_f32(a, mask & 3));
+    result = vsetq_lane_f32(vgetq_lane_f32(a, (mask >> 2) & 3), result, 1);
+    result = vsetq_lane_f32(vgetq_lane_f32(b, (mask >> 4) & 3), result, 2);
+    return vsetq_lane_f32(vgetq_lane_f32(b, (mask >> 6) & 3), result, 3);
+}
+
+#define _mm_shuffle_ps(a, b, imm8) osm_neon_shuffle<(imm8)>((a), (b))
 /*
 //STD version for testing:
 #include <array>

@@ -22,11 +22,14 @@
 #include "windowfunction.h"
 #include "container/array.h"
 
-#if defined(Q_PROCESSOR_X86_64)
-#include "ssemath.h"
-#endif
-#if defined(Q_PROCESSOR_ARM)
+#include <vector>
+
+#if defined(__aarch64__) || defined(_M_ARM64) || defined(Q_PROCESSOR_ARM)
 #include "armmath.h"
+#elif defined(__x86_64__) || defined(_M_X64) || defined(Q_PROCESSOR_X86_64)
+#include "ssemath.h"
+#else
+#error FourierTransform requires x86-64 SSE2 or ARM NEON
 #endif
 
 class FourierTransform

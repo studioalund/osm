@@ -18,9 +18,9 @@
 #ifndef ARRAY_H
 #define ARRAY_H
 
-#include <cmath>
-#include <mutex>
-#include <QtGlobal>
+#include <cassert>
+#include <cstddef>
+#include <functional>
 
 namespace Container {
 template<typename T> class array
@@ -28,11 +28,11 @@ template<typename T> class array
 
 private:
     T *m_data;
-    size_t m_size;
+    std::size_t m_size;
 
 public:
     array() : m_data(nullptr), m_size(0) {}
-    array(size_t size, T value) : m_data(nullptr), m_size(0)
+    array(std::size_t size, T value) : m_data(nullptr), m_size(0)
     {
         resize(size, value);
     }
@@ -42,23 +42,24 @@ public:
         delete[] m_data;
     }
 
-    size_t size() const
+    std::size_t size() const
     {
         return m_size;
     }
 
     //! reallocate memory for the array
-    void resize(const size_t &size)
+    void resize(const std::size_t &size)
     {
         if (size != m_size) {
-            if (m_data) delete[] m_data;
-            m_data = new T[size];
+            T *data = new T[size];
+            delete[] m_data;
+            m_data = data;
             m_size = size;
         }
     }
 
     //! resize array and fill with value
-    void resize(const size_t &size, const T &value)
+    void resize(const std::size_t &size, const T &value)
     {
         resize(size);
         fill(value);
@@ -70,25 +71,25 @@ public:
         if (!m_data)
             return;
 
-        for (size_t i = 0; i < m_size; ++i) {
+        for (std::size_t i = 0; i < m_size; ++i) {
             m_data[i] = value;
         }
     }
 
     T *pat(const unsigned int &i) const
     {
-        Q_ASSERT(i < m_size);
+        assert(i < m_size);
         return &m_data[i];
     }
 
     T &operator [](const unsigned int &i)
     {
-        Q_ASSERT(i < m_size);
+        assert(i < m_size);
         return m_data[i];
     }
     const T &operator [](const unsigned int &i) const
     {
-        Q_ASSERT(i < m_size);
+        assert(i < m_size);
         return m_data[i];
     }
 
@@ -97,7 +98,7 @@ public:
         if (!m_data)
             return;
 
-        for (size_t i = 0; i < m_size; ++i) {
+        for (std::size_t i = 0; i < m_size; ++i) {
             f(&m_data[i]);
         }
     }

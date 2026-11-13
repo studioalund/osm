@@ -16,10 +16,14 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "fouriertransform.h"
-#include <QtMath>
-#ifndef USE_SSE2
-#define USE_SSE2
-#endif
+
+#include <cassert>
+#include <cmath>
+#include <utility>
+
+namespace {
+constexpr double pi = 3.14159265358979323846;
+}
 
 FourierTransform::FourierTransform(unsigned int size):
     m_size(size),
@@ -90,7 +94,7 @@ void FourierTransform::prepareFast()
 
     auto power = static_cast<unsigned int>(log2(m_size));
     m_wlen.resize(power);
-    float ang, dPi = 2 * static_cast<float>(M_PI);
+    float ang, dPi = 2 * static_cast<float>(pi);
     for (unsigned int len = 2, l = 0; len <= m_size; len <<= 1, l++) {
         ang = dPi / len;
         m_wlen[l] = Complex(cosf(ang), sinf(ang));
@@ -197,7 +201,7 @@ void FourierTransform::transform(bool ultra)
 }
 void FourierTransform::reverse()
 {
-    Q_ASSERT(m_type == Fast);
+    assert(m_type == Fast);
     fast(true);
 }
 
@@ -227,12 +231,7 @@ GNU_ALIGN void FourierTransform::fast(bool reverse, bool ultrafast)
     v4sf tmp0, tmp1, tmp2, tmp3, vw;
     v4sf tmpi = _mm_set_ps(1, -1, 1, -1);
 
-#if defined(_MSC_VER)
-    __declspec(align(16))
-#elif defined(Q_PROCESSOR_ARM)
-    __attribute__((aligned(16)))
-#endif
-    float stored[4];
+    alignas(16) float stored[4];
     unsigned long ultraLimit = m_size / 2;
     bool breakloop = false;
 
@@ -335,10 +334,7 @@ GNU_ALIGN void FourierTransform::transformSingleChannel(bool reverse)
     v4sf tmp0, tmp1, tmp2, tmp3, vw;
     v4sf tmpi = _mm_set_ps(1, -1, 1, -1);
 
-#ifdef _MSC_VER
-    __declspec(align(16))
-#endif
-    float stored[4];
+    alignas(16) float stored[4];
 
     float normalization = 1.f;
     if (!reverse) {
@@ -426,7 +422,7 @@ void FourierTransform::ufast()
 GNU_ALIGN void FourierTransform::log()
 {
     v4sf data, t, m;
-    float stored[4];
+    alignas(16) float stored[4];
     for (unsigned int i = 0; i < m_logBasis.size(); ++i) {
 
         data = _mm_set1_ps(0.f);
@@ -490,7 +486,7 @@ GNU_ALIGN void FourierTransform::prepareLog()
         auto norm = (m_norm == Norm::Sqrt ? m_logBasis[i].N : float(1.f) );
         float phase = (m_align == Align::Center ? -(m_logBasis[i].N / 2.f) : 0);
         for (unsigned int j = 0; j < m_logBasis[i].N; ++j, ++phase) {
-            w.polar(-2.f  * M_PI * phase * frequency);
+            w.polar(-2.f  * pi * phase * frequency);
             w *= m_window.pointGain(j, m_logBasis[i].N) / (norm * gain);
             m_logBasis[i].w[j] = _mm_set_ps(w.imag, w.real, w.imag, w.real);
         }

@@ -21,7 +21,9 @@
 #include <cmath>
 #include "./complex.h"
 #include "container/array.h"
+#ifndef OSM_STANDALONE_DSP
 #include "abstract/source.h"
+#endif
 #include "fouriertransform.h"
 
 class Coherence
@@ -36,14 +38,20 @@ private:
     Container::array<Complex> m_Crm;
 
 public:
+#ifdef OSM_STANDALONE_DSP
+    using Output = float;
+#else
+    using Output = Abstract::Data::FTData;
+#endif
+
     Coherence();
 
-    void setDepth(const size_t &depth) noexcept;
-    void setSize(const size_t &size) noexcept;
+    void setDepth(const size_t &depth);
+    void setSize(const size_t &size);
     [[deprecated]] void append(unsigned int i, const Complex &refernce, const Complex &measurement) noexcept;
     [[deprecated]] float value(unsigned int i) const noexcept;
 
-    void calculate(Abstract::Data::FTData *dst, FourierTransform *src);
+    void calculate(Output *dst, FourierTransform *src);
     inline void calculateRR(unsigned int i, FourierTransform *src);
     inline void calculateMM(unsigned int i, FourierTransform *src);
     inline void calculateRM(unsigned int i, FourierTransform *src);

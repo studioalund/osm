@@ -22,12 +22,16 @@
 
 namespace Filter {
 
+#ifndef OSM_STANDALONE_DSP
 Q_NAMESPACE
+#endif
 /*
  * Bessel Low Pass Filter 5th order
  */
 enum Frequency {FourthHz, HalfHz, OneHz};
+#ifndef OSM_STANDALONE_DSP
 Q_ENUM_NS(Frequency)
+#endif
 
 template <typename T> class BesselLPF
 {

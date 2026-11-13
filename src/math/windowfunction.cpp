@@ -16,15 +16,28 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "windowfunction.h"
-#include <QtMath>
 
+#ifndef OSM_STANDALONE_DSP
+#include <QStringList>
+#endif
+
+namespace {
+constexpr double pi = 3.14159265358979323846;
+constexpr double e = 2.71828182845904523536;
+}
+
+#ifdef OSM_STANDALONE_DSP
+WindowFunction::WindowFunction(Type type) :
+#else
 WindowFunction::WindowFunction(Type type, QObject *parent) : QObject(parent),
+#endif
     m_type(type),
     m_size(0),
     m_gain(1.f)
 {
 
 }
+#ifndef OSM_STANDALONE_DSP
 const std::map<WindowFunction::Type, QString> WindowFunction::TypeMap = {
     {WindowFunction::Type::Rectangular, "Rectangular"},
     {WindowFunction::Type::Hann, "Hann"},
@@ -34,6 +47,7 @@ const std::map<WindowFunction::Type, QString> WindowFunction::TypeMap = {
     {WindowFunction::Type::HFT223D, "HFT223D"},
     {WindowFunction::Type::Exponental, "Exponental"}
 };
+#endif
 void WindowFunction::setSize(unsigned int size)
 {
     if (m_size != size) {
@@ -50,12 +64,12 @@ unsigned int WindowFunction::size() const
 
 float WindowFunction::pointGain(float i, unsigned int N) const
 {
-    double z = 2.0 * M_PI * i / N;
+    double z = 2.0 * pi * i / N;
     if (z < 0) {
         z = 0;
     }
-    if (z > 2 * M_PI) {
-        z = 2 * M_PI;
+    if (z > 2 * pi) {
+        z = 2 * pi;
     }
     switch (m_type) {
     case Type::Rectangular:
@@ -88,7 +102,7 @@ float WindowFunction::pointGain(float i, unsigned int N) const
     case Type::Exponental: {
         auto t = (N / 2.0) * 8.69 / (7 * 8.69); //-140dB on edges
         auto power = - std::abs(i - N / 2) / t;
-        return std::pow(M_E, power);
+        return std::pow(e, power);
     }
     }
 }
@@ -102,6 +116,7 @@ void WindowFunction::setType(Type t)
     m_type = t;
     calculate();
 }
+#ifndef OSM_STANDALONE_DSP
 QVariant WindowFunction::getTypes()
 {
     QStringList typeList;
@@ -110,16 +125,19 @@ QVariant WindowFunction::getTypes()
     }
     return typeList;
 }
+#endif
 
 const float &WindowFunction::get(unsigned int k) const
 {
     return m_data[k];
 }
 
+#ifndef OSM_STANDALONE_DSP
 QString WindowFunction::name(Type type) noexcept
 {
     return WindowFunction::TypeMap.at(type);
 }
+#endif
 
 float WindowFunction::gain() const
 {
@@ -144,8 +162,10 @@ void WindowFunction::calculate()
         m_data[i] = pointGain(i, m_size) / m_gain;
     }
 }
+#ifndef OSM_STANDALONE_DSP
 QDebug operator<<(QDebug dbg, const WindowFunction::Type &t)
 {
     dbg.nospace() << "WindowFunction type:" << WindowFunction::TypeMap.at(t);
     return dbg.maybeSpace();
 }
+#endif
